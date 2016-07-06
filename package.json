@@ -1,0 +1,7 @@
+{
+  "name": "dependency-tree",
+  "description": "graphically show a dependency tree using only scss",
+  "author": "Todd Milburn <todd.milburn@gmail.com> (toddmilburn.github.io)",
+  "version": "0.1.0",
+  "main": "dependency-tree.js"
+}
