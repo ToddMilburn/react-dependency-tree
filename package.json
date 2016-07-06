@@ -3,5 +3,9 @@
   "description": "graphically show a dependency tree using only scss",
   "author": "Todd Milburn <todd.milburn@gmail.com> (toddmilburn.github.io)",
   "version": "0.1.0",
-  "main": "dependency-tree.js"
+  "main": "dependency-tree.js",
+  "dependencies": {
+    "react": "x.x.x",
+    "classnames": "x.x.x"
+  }
 }
