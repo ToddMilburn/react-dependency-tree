@@ -1,11 +1,27 @@
 {
-  "name": "dependency-tree",
+  "name": "react-dependency-tree",
   "description": "graphically show a dependency tree using only scss",
   "author": "Todd Milburn <todd.milburn@gmail.com> (toddmilburn.github.io)",
   "version": "0.1.0",
-  "main": "dependency-tree.js",
+  "main": "react-dependency-tree.js",
   "dependencies": {
     "react": "x.x.x",
     "classnames": "x.x.x"
-  }
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ToddMilburn/react-dependency-tree.git"
+  },
+  "keywords": [
+    "react",
+    "dependency-tree"
+  ],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ToddMilburn/react-dependency-tree/issues"
+  },
+  "homepage": "https://github.com/ToddMilburn/react-dependency-tree#readme"
 }
