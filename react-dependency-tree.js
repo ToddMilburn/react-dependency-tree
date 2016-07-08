@@ -108,7 +108,7 @@ var DependencyTree = React.createClass({
         var nodes = [];
         var grandfatherNode = [{
             nodeName: node.nodeName.toUpperCase(),
-            alternateName: node.alternateName.toUpperCase(),
+            alternateName: (node.alternateName) ? node.alternateName.toUpperCase() : '',
             parent: 0,
             displayPosition: 0
         }];
