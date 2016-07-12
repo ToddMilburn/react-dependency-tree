@@ -1,6 +1,7 @@
 // VENDOR LIBS
 var React = require('react');
 var _ = require('lodash');
+var classNames = require('classnames');
 var DependencyNode = require('./dependency-node');
 
 var DependencyTree = React.createClass({
@@ -11,13 +12,11 @@ var DependencyTree = React.createClass({
             items: React.PropTypes.array.isRequired,
             nodeName: React.PropTypes.node
         }).isRequired,
-        large: React.PropTypes.bool,
         viewType: React.PropTypes.string
     },
 
     getDefaultProps: function () {
         return {
-            large: false,
             viewType: 'alternate'
         };
     },
@@ -49,17 +48,18 @@ var DependencyTree = React.createClass({
     renderDetail: function (item, index) {
         return (
             <li className="dependency-tree--node-group" key={index}>
-                <DependencyNode item={this.getNodeProps(item, index)} />
+                <DependencyNode {...this.getNodeProps(item, index)} />
             </li>
         );
     },
 
     getNodeProps: function (item, index) {
         var connectionProps = this.getConnections(item, index);
-        var props = {};
-
-        props.alternateContent = item.alternateName;
-        props.nodeContent = item.nodeName;
+        var props = {
+            highlight: (this.state.mainNodeName === item.nodeName),
+            wide: (this.state.viewType === 'alternate'),
+            renderTextCallback: this.renderTextCallback.bind(this, item)
+        };
 
         return _.extend(props, connectionProps);
     },
@@ -71,14 +71,35 @@ var DependencyTree = React.createClass({
 
         return {
             child: (parent !== undefined),
-            highlight: (this.state.mainNodeName === item.nodeName),
-            large: this.props.large,
             parent: (item.firstChild !== undefined),
             passThru: item.inBetween,
-            renderAlternate: (this.state.viewType === 'alternate'),
             syblingAbove: syblingAbove,
             syblingBelow: syblingBelow,
         };
+    },
+
+    renderTextCallback: function (item) {
+        var content = (this.state.viewType === 'alternate') ? item.alternateName : item.nodeName;
+
+        if (content) {
+            content = (
+                <span className={this.getTextClassName(item)}>
+                    {content}
+                </span>
+            );
+        }
+
+        return content;
+    },
+
+    getTextClassName: function (item) {
+        var classes = {
+            'dependency-tree--node': true,
+            'dependency-tree--node_large': (this.state.viewType === 'alternate'),
+            'dependency-tree--node_main': (this.state.mainNodeName === item.nodeName)
+        };
+
+        return classNames(classes);
     },
 
     initializeState: function (props) {
