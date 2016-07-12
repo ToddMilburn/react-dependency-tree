@@ -5,87 +5,85 @@ var classNames = require('classnames');
 var DependencyNode = React.createClass({
 
     propTypes: {
-        item: React.PropTypes.shape({
-            alternateContent: React.PropTypes.string,
-            highlight: React.PropTypes.bool,
-            large: React.PropTypes.bool,
-            nodeContent: React.PropTypes.string,
-            parent: React.PropTypes.bool,
-            passThru: React.PropTypes.bool,
-            renderAlternate: React.PropTypes.bool,
-            syblingAbove: React.PropTypes.bool,
-            syblingBelow: React.PropTypes.bool
-        }).isRequired
+        child: React.PropTypes.bool,
+        highlight: React.PropTypes.bool,
+        wide: React.PropTypes.bool,
+        parent: React.PropTypes.bool,
+        passThru: React.PropTypes.bool,
+        renderTextCallback: React.PropTypes.func.isRequired,
+        syblingAbove: React.PropTypes.bool,
+        syblingBelow: React.PropTypes.bool
     },
 
     getDefaultProps: function () {
         return {
+            child: false,
             highlight: false,
-            renderAlternate: true
+            wide: false,
+            parent: false,
+            passThru: false,
+            syblingAbove: false,
+            syblingBelow: false
         }
     },
 
     render: function () {
-        var item = this.props.item;
-
         return (
             <span>
                 <span className="dependency-node--graphic">
-                    <span className={this.getFrontTopGraphicClassName(item)} />
-                    <span className={this.getFrontBottomGraphicClassName(item)} />
+                    <span className={this.getFrontTopGraphicClassName()} />
+                    <span className={this.getFrontBottomGraphicClassName()} />
                 </span>
-                {this.renderNodeName(this.props.item)}
+                {this.renderNode()}
                 <span className="dependency-node--graphic">
-                    <span className={this.getBackTopGraphicClassName(item)} />
-                    <span className={this.getBackBottomGraphicClassName(item)} />
+                    <span className={this.getBackTopGraphicClassName()} />
+                    <span className={this.getBackBottomGraphicClassName()} />
                 </span>
             </span>
         );
     },
 
-    renderNodeName: function (item) {
-        var renderedName = null;
+    renderNode: function () {
+        var content = this.props.renderTextCallback();
 
-        if (item.nodeContent) {
-            renderedName = (
-                <span className={this.getTextBlockClassName(item)}>
-                    <span className="dependency-node--text-block-padding">
-                        <span className={this.getTextClassName(item)}>
-                            {(item.renderAlternate) ? item.nodeContent : item.alternateContent}
-                        </span>
+        if (content) {
+            content = (
+                <span className={this.getNodeClassName()}>
+                    <span className={this.getNodePaddingClassName()}>
+                        {content}
                     </span>
                 </span>
             );
         }
 
-        return renderedName;
+        return content;
     },
 
-    getFrontTopGraphicClassName: function (item) {
+    getFrontTopGraphicClassName: function () {
         var classes = {
             'dependency-node--graphic_front-top': true,
-            'dependency-node--graphic_has-parent': (item.child),
-            'dependency-node--graphic_sybling-above': item.syblingAbove,
-            'dependency-node--graphic_pass-thru': item.passThru
+            'dependency-node--graphic_has-parent': this.props.child,
+            'dependency-node--graphic_sybling-above': this.props.syblingAbove,
+            'dependency-node--graphic_pass-thru': this.props.passThru
         };
 
         return classNames(classes);
     },
 
-    getFrontBottomGraphicClassName: function (item) {
+    getFrontBottomGraphicClassName: function () {
         var classes = {
             'dependency-node--graphic_front-bottom': true,
-            'dependency-node--graphic_sybling-below': item.syblingBelow,
-            'dependency-node--graphic_pass-thru': item.passThru
+            'dependency-node--graphic_sybling-below': this.props.syblingBelow,
+            'dependency-node--graphic_pass-thru': this.props.passThru
         };
 
         return classNames(classes);
     },
 
-    getBackTopGraphicClassName: function (item) {
+    getBackTopGraphicClassName: function () {
         var classes = {
             'dependency-node--graphic_back-top': true,
-            'dependency-node--graphic_has-child': item.parent
+            'dependency-node--graphic_has-child': this.props.parent
         };
 
         return classNames(classes);
@@ -99,20 +97,20 @@ var DependencyNode = React.createClass({
         return classNames(classes);
     },
 
-    getTextBlockClassName: function (item) {
+    getNodeClassName: function () {
         var classes = {
-            'dependency-node--main-text-block': item.highlight,
-            'dependency-node--text-block': true
+            'dependency-node--content': true,
+            'dependency-node--content_highlight': this.props.highlight,
+            'dependency-node--content_wide': this.props.wide
         };
 
         return classNames(classes);
     },
 
-    getTextClassName: function (item) {
+    getNodePaddingClassName: function () {
         var classes = {
-            'dependency-node--main-node': item.highlight,
-            'dependency-node--node': true,
-            'dependency-node--node_large': item.large
+            'dependency-node--content-padding': true,
+            'dependency-node--content-padding_wide': this.props.wide
         };
 
         return classNames(classes);

@@ -2,7 +2,7 @@
   "name": "react-dependency-tree",
   "description": "graphically show a dependency tree using only scss",
   "author": "Todd Milburn <todd.milburn@gmail.com> (toddmilburn.github.io)",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "react-dependency-tree.js",
   "dependencies": {
     "react": "x.x.x",
