@@ -1,37 +1,33 @@
 // VENDOR LIBS
 var React = require('react');
-var classNames = require('classnames');
+var _ = require('lodash');
+var DependencyNode = require('./dependency-node');
 
 var DependencyTree = React.createClass({
 
     propTypes: {
         items: React.PropTypes.shape({
+            alternateName: React.PropTypes.node,
             items: React.PropTypes.array.isRequired,
-            nodeName: React.PropTypes.node,
-            alternateName: React.PropTypes.node
+            nodeName: React.PropTypes.node
         }).isRequired,
+        large: React.PropTypes.bool,
         viewType: React.PropTypes.string
     },
 
     getDefaultProps: function () {
         return {
+            large: false,
             viewType: 'alternate'
         };
     },
 
     getInitialState: function () {
-        return {
-            mainNodeName: this.props.items.nodeName.toUpperCase(),
-            nodes: this.prepareAllData(this.props.items)
-        };
+        return this.initializeState(this.props);
     },
 
     componentWillReceiveProps: function (nextProps) {
-        this.setState({
-            mainNodeName: nextProps.items.nodeName.toUpperCase(),
-            nodes: this.prepareAllData(nextProps.items),
-            viewType: nextProps.viewType
-        });
+        this.setState(this.initializeState(nextProps));
     },
 
     render: function () {
@@ -53,35 +49,44 @@ var DependencyTree = React.createClass({
     renderDetail: function (item, index) {
         return (
             <li className="dependency-tree--node-group" key={index}>
-                <span className="dependency-tree--graphic">
-                    <span className={this.getFrontTopGraphicClassName(item, index)} />
-                    <span className={this.getFrontBottomGraphicClassName(item, index)} />
-                </span>
-                {this.renderNodeName(item)}
-                <span className="dependency-tree--graphic">
-                    <span className={this.getBackTopGraphicClassName(item, index)} />
-                    <span className={this.getBackBottomGraphicClassName(item, index)} />
-                </span>
+                <DependencyNode item={this.getNodeProps(item, index)} />
             </li>
         );
     },
 
-    renderNodeName: function (item) {
-        var renderedName = null;
+    getNodeProps: function (item, index) {
+        var connectionProps = this.getConnections(item, index);
+        var props = {};
 
-        if (item.nodeName) {
-            renderedName = (
-                <span className={this.getTextBlockClassName(item)}>
-                    <span className="dependency-tree--text-block-padding">
-                        <span className={this.getTextClassName(item)}>
-                            {(this.props.viewType === 'alternate') ? item.nodeName : item.alternateName}
-                        </span>
-                    </span>
-                </span>
-            );
-        }
+        props.alternateContent = item.alternateName;
+        props.nodeContent = item.nodeName;
 
-        return renderedName;
+        return _.extend(props, connectionProps);
+    },
+
+    getConnections: function (item, index) {
+        var parent = item.parent;
+        var syblingAbove = (parent && parent.firstChild !== parent.lastChild && parent.firstChild !== index);
+        var syblingBelow = (parent && parent.firstChild !== parent.lastChild && parent.lastChild !== index);
+
+        return {
+            child: (parent !== undefined),
+            highlight: (this.state.mainNodeName === item.nodeName),
+            large: this.props.large,
+            parent: (item.firstChild !== undefined),
+            passThru: item.inBetween,
+            renderAlternate: (this.state.viewType === 'alternate'),
+            syblingAbove: syblingAbove,
+            syblingBelow: syblingBelow,
+        };
+    },
+
+    initializeState: function (props) {
+        return {
+            mainNodeName: props.items.nodeName.toUpperCase(),
+            nodes: this.prepareAllData(props.items),
+            viewType: props.viewType
+        };
     },
 
     prepareAllData: function (allNodes) {
@@ -109,7 +114,6 @@ var DependencyTree = React.createClass({
         var grandfatherNode = [{
             nodeName: node.nodeName.toUpperCase(),
             alternateName: (node.alternateName) ? node.alternateName.toUpperCase() : '',
-            parent: 0,
             displayPosition: 0
         }];
 
@@ -285,8 +289,6 @@ var DependencyTree = React.createClass({
     },
 
     updateChildIndexFromChildDisplayPositions: function (nodes) {
-        // var changed = false;
-
         nodes.forEach(function (column, columnIndex) {
 
             if (columnIndex < nodes.length - 1) {
@@ -301,8 +303,6 @@ var DependencyTree = React.createClass({
                 });
             }
         });
-
-        // return changed;
     },
 
     fillInBlankCells: function (nodes) {
@@ -369,69 +369,6 @@ var DependencyTree = React.createClass({
                 });
             }
         });
-    },
-
-    getFrontTopGraphicClassName: function (item, index) {
-        var parent = item.parent;
-        var hasParent = (parent);
-        var hasSiblingAbove = (parent && parent.firstChild !== parent.lastChild && parent.firstChild !== index);
-        var classes = {
-            'dependency-tree--graphic_front-top': true,
-            'dependency-tree--graphic_has-parent': hasParent,
-            'dependency-tree--graphic_front-top-sibling': hasSiblingAbove,
-            'dependency-tree--graphic_in-between': item.inBetween
-        };
-
-        return classNames(classes);
-    },
-
-    getFrontBottomGraphicClassName: function (item, index) {
-        var parent = item.parent;
-        var hasParentBelow = (parent && item.displayPosition < parent.displayPosition);
-        var hasSiblingBelow = (parent && parent.firstChild !== parent.lastChild && parent.lastChild !== index);
-        var classes = {
-            'dependency-tree--graphic_front-bottom': true,
-            'dependency-tree--graphic_parent-below': hasParentBelow,
-            'dependency-tree--graphic_front-bottom-sibling': hasSiblingBelow,
-            'dependency-tree--graphic_in-between': item.inBetween
-        };
-
-        return classNames(classes);
-    },
-
-    getBackTopGraphicClassName: function (item) {
-        var classes = {
-            'dependency-tree--graphic_back-top': true,
-            'dependency-tree--graphic_has-child': (item.firstChild !== undefined)
-        };
-
-        return classNames(classes);
-    },
-
-    getBackBottomGraphicClassName: function () {
-        var classes = {
-            'dependency-tree--graphic_back-bottom': true
-        };
-
-        return classNames(classes);
-    },
-
-    getTextBlockClassName: function (item) {
-        var classes = {
-            'dependency-tree--text-block': true,
-            'dependency-tree--main-text-block': (item.nodeName === this.state.mainNodeName)
-        };
-
-        return classNames(classes);
-    },
-
-    getTextClassName: function (item) {
-        var classes = {
-            'dependency-tree--node': true,
-            'dependency-tree--main-node': (item.nodeName === this.state.mainNodeName)
-        };
-
-        return classNames(classes);
     }
 });
 
