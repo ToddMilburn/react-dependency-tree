@@ -1,34 +1,10 @@
 @import 'sass/globals';
 
 .dependency-tree {
-    width: 2070px;
-
-    &--node {
-        box-shadow: none;
-        display: table-cell;
-        font: 13px Arial;
-        height: 36px;
-        text-align: center;
-        vertical-align: middle;
-        width: 150px;
-
-        &_large {
-            font: 16px Arial;
-        }
-
-        &_main {
-            font-weight: bold;
-        }
-    }
-
+    width: 3070px;
 
     &--column {
         display: inline-block;
         vertical-align: top;
-    }
-
-    &--node-group {
-        display: block;
-        height: 36px;
     }
 }

@@ -1,7 +1,9 @@
-// VENDOR LIBS
+// EXTERNAL VENDOR LIBS
 var React = require('react');
 var _ = require('lodash');
 var classNames = require('classnames');
+
+// INTERNAL LIBS
 var DependencyNode = require('./dependency-node');
 
 var DependencyTree = React.createClass({
@@ -10,14 +12,17 @@ var DependencyTree = React.createClass({
         items: React.PropTypes.shape({
             alternateName: React.PropTypes.node,
             items: React.PropTypes.array.isRequired,
-            nodeName: React.PropTypes.node
+            nodeName: React.PropTypes.node.isRequired
         }).isRequired,
-        viewType: React.PropTypes.string
+        renderNodeCallback: React.PropTypes.func.isRequired,
+        tall: React.PropTypes.bool,
+        wide: React.PropTypes.bool
     },
 
     getDefaultProps: function () {
         return {
-            viewType: 'alternate'
+            tall: false,
+            wide: false
         };
     },
 
@@ -47,7 +52,7 @@ var DependencyTree = React.createClass({
 
     renderDetail: function (item, index) {
         return (
-            <li className="dependency-tree--node-group" key={index}>
+            <li key={index}>
                 <DependencyNode {...this.getNodeProps(item, index)} />
             </li>
         );
@@ -57,8 +62,9 @@ var DependencyTree = React.createClass({
         var connectionProps = this.getConnections(item, index);
         var props = {
             highlight: (this.state.mainNodeName === item.nodeName),
-            wide: (this.state.viewType === 'alternate'),
-            renderTextCallback: this.renderTextCallback.bind(this, item)
+            renderNodeCallback: this.props.renderNodeCallback.bind(null, item),
+            tall: this.props.tall,
+            wide: this.props.wide
         };
 
         return _.extend(props, connectionProps);
@@ -74,57 +80,44 @@ var DependencyTree = React.createClass({
             parent: (item.firstChild !== undefined),
             passThru: item.inBetween,
             syblingAbove: syblingAbove,
-            syblingBelow: syblingBelow,
+            syblingBelow: syblingBelow
         };
-    },
-
-    renderTextCallback: function (item) {
-        var content = (this.state.viewType === 'alternate') ? item.alternateName : item.nodeName;
-
-        if (content) {
-            content = (
-                <span className={this.getTextClassName(item)}>
-                    {content}
-                </span>
-            );
-        }
-
-        return content;
-    },
-
-    getTextClassName: function (item) {
-        var classes = {
-            'dependency-tree--node': true,
-            'dependency-tree--node_large': (this.state.viewType === 'alternate'),
-            'dependency-tree--node_main': (this.state.mainNodeName === item.nodeName)
-        };
-
-        return classNames(classes);
     },
 
     initializeState: function (props) {
         return {
             mainNodeName: props.items.nodeName.toUpperCase(),
-            nodes: this.prepareAllData(props.items),
-            viewType: props.viewType
+            nodes: this.prepareAllData(props.items)
         };
     },
 
     prepareAllData: function (allNodes) {
         var nodes = this.getNodeColumns(allNodes);
-        var changed = true;
+        var lastSnapShotChecksum = this.getNodeSnapShot(nodes);
+        var refining = 1;
+        var snapShotChecksum;
 
         this.getParents(nodes);
         this.addDefaultPositions(nodes);
         this.addChildPositions(nodes);
 
-        while (changed) {
-            changed = 0;
-            changed += this.positionParentInCenterOfChildren(nodes);
-            changed += this.moveChildrenDown(nodes);
+        while (refining && refining < 10) {
+            this.positionParentInCenterOfChildren(nodes);
+            this.moveChildrenDown(nodes);
+            this.ensureAllChildrenAreContiguous(nodes);
+            this.moveChildrenUp(nodes);
+            this.positionParentInCenterOfChildren(nodes);
             this.updateChildIndexFromChildDisplayPositions(nodes);
             this.fillInBlankCells(nodes);
             this.addRelationshipIndicators(nodes);
+
+            snapShotChecksum = this.getNodeSnapShot(nodes);
+
+            if (lastSnapShotChecksum !== snapShotChecksum) {
+                lastSnapShotChecksum = snapShotChecksum;
+            } else {
+                refining += 1;
+            }
         }
 
         return nodes;
@@ -133,9 +126,9 @@ var DependencyTree = React.createClass({
     getNodeColumns: function (node) {
         var nodes = [];
         var grandfatherNode = [{
-            nodeName: node.nodeName.toUpperCase(),
             alternateName: (node.alternateName) ? node.alternateName.toUpperCase() : '',
-            displayPosition: 0
+            displayPosition: 0,
+            nodeName: node.nodeName.toUpperCase()
         }];
 
         nodes = this.buildNodeColumns(node, 0, 0, nodes);
@@ -154,10 +147,10 @@ var DependencyTree = React.createClass({
             }
 
             nodes[level].push({
-                nodeName: childNode.nodeName,
                 alternateName: childNode.alternateName,
-                parent: parentIndex,
-                displayPosition: nodes[level].length
+                displayPosition: nodes[level].length,
+                nodeName: childNode.nodeName,
+                parent: parentIndex
             });
 
             if (childNode.items.length) {
@@ -233,7 +226,6 @@ var DependencyTree = React.createClass({
         var nextColumn;
         var firstChild;
         var lastChild;
-        var changed = false;
 
         function positionParent (parent, parentIndex) {
             if (parent.firstChild !== undefined) {
@@ -247,12 +239,8 @@ var DependencyTree = React.createClass({
             }
 
             // don't position this node before previous sibling
-            if (parentIndex && displayPosition <= column[parentIndex - 1].displayPosition) {
+            if (parentIndex && column[parentIndex - 1] && displayPosition <= column[parentIndex - 1].displayPosition) {
                 displayPosition = column[parentIndex - 1].displayPosition + 1;
-            }
-
-            if (parent.displayPosition !== displayPosition) {
-                changed = true;
             }
 
             parent.displayPosition = displayPosition;
@@ -267,13 +255,59 @@ var DependencyTree = React.createClass({
                 positionParent
             );
         }
+    },
 
-        return changed;
+    removeGapsInChildren: function (nodes) {
+        var childIndex;
+        var column;
+        var displayPosition;
+        var index;
+        var nextColumn;
+
+        for (index = 1; index < nodes.length - 1; index += 1) {
+
+            column = nodes[index];
+            nextColumn = nodes[index + 1];
+
+            column.forEach(function (node) {
+
+                if (node.firstChild !== undefined) {
+
+                    displayPosition = nextColumn[node.firstChild].displayPosition;
+
+                    for (childIndex = node.firstChild + 1; childIndex <= node.lastChild; childIndex += 1) {
+                        displayPosition += 1;
+
+                        if (nextColumn[childIndex].displayPosition !== displayPosition) {
+                            nextColumn[childIndex].displayPosition = displayPosition;
+                        }
+                    }
+                }
+            });
+        }
+    },
+
+    removeOverlaps: function (nodes) {
+        var lastDisplayPosition;
+
+        function moveChildren (node) {
+            if (lastDisplayPosition >= node.displayPosition) {
+                node.displayPosition = lastDisplayPosition + 1;
+            }
+            lastDisplayPosition = node.displayPosition;
+        }
+
+        for (index = 1; index < nodes.length - 1; index += 1) {
+
+            column = nodes[index];
+            lastDisplayPosition = -1;
+
+            column.forEach(moveChildren.bind(this));
+        }
     },
 
     // never allow lastChild of a parent to be above the parent
     moveChildrenDown: function (nodes) {
-        var changed = false;
         var column;
         var delta;
         var nextColumn;
@@ -283,9 +317,8 @@ var DependencyTree = React.createClass({
                 delta = node.displayPosition - nextColumn[node.lastChild].displayPosition;
 
                 if (delta > 0) {
-                    // move down all children in column from node.firstChild all the way down
+                    // move down all children in column starting from node.firstChild
                     this.moveDisplayPositionsDown(nextColumn, node.firstChild, delta);
-                    changed = true;
                 }
             }
         }
@@ -297,8 +330,6 @@ var DependencyTree = React.createClass({
 
             column.forEach(moveChildren.bind(this));
         }
-
-        return changed;
     },
 
     moveDisplayPositionsDown: function (column, startingIndex, delta) {
@@ -306,6 +337,70 @@ var DependencyTree = React.createClass({
 
         for (index = startingIndex; index < column.length; index += 1) {
             column[index].displayPosition += delta;
+        }
+    },
+
+    // never allow firstChild of a parent to be below the parent
+    moveChildrenUp: function (nodes) {
+        var column;
+        var delta;
+        var nextColumn;
+
+        function moveChildren (node) {
+            if (node.firstChild !== undefined) {
+                delta = node.displayPosition - nextColumn[node.firstChild].displayPosition;
+
+                if (delta < 0) {
+                    // move up all children in column starting from node.firstChild
+                    this.moveDisplayPositionsUp(nextColumn, node.firstChild, delta);
+                }
+            }
+        }
+
+        for (index = 1; index < nodes.length - 1; index += 1) {
+
+            column = nodes[index];
+            nextColumn = nodes[index + 1];
+
+            column.forEach(moveChildren.bind(this));
+        }
+    },
+
+    moveDisplayPositionsUp: function (column, startingIndex, delta) {
+        var index;
+
+        for (index = startingIndex; index < column.length; index += 1) {
+            column[index].displayPosition += delta;
+        }
+    },
+
+    ensureAllChildrenAreContiguous: function (nodes) {
+        var column;
+        var delta;
+        var nextColumn;
+
+        function moveChildren (node) {
+            var displayPosition;
+            var indexChildren;
+
+            if (node.firstChild !== undefined) {
+                displayPosition = nextColumn[node.firstChild].displayPosition + 1;
+
+                for (indexChildren = node.firstChild + 1; indexChildren <= node.lastChild; indexChildren += 1) {
+
+                    if (nextColumn[indexChildren]) {
+                        nextColumn[indexChildren].displayPosition = displayPosition;
+                        displayPosition += 1;
+                    }
+                }
+            }
+        }
+
+        for (index = 1; index < nodes.length - 1; index += 1) {
+            column = nodes[index];
+            nextColumn = nodes[index + 1];
+
+            column.forEach(moveChildren.bind(this));
         }
     },
 
@@ -328,11 +423,12 @@ var DependencyTree = React.createClass({
 
     fillInBlankCells: function (nodes) {
         var columnData;
+        var lengthOfLongestColumn = this.getLengthOfLongestColumn(nodes);
 
         nodes.forEach(function (column, columnIndex) {
 
             // create an array with an empty object for each value
-            columnData = this.createArrayOfEmptyObjects(this.getLengthLongestColumn(nodes));
+            columnData = this.createArrayOfEmptyObjects(lengthOfLongestColumn);
 
             column.forEach(function (node) {
                 columnData[node.displayPosition] = node;
@@ -353,18 +449,30 @@ var DependencyTree = React.createClass({
         return arrayOfEmptyObjects;
     },
 
-    getLengthLongestColumn: function (nodes) {
+    getLengthOfLongestColumn: function (nodes) {
         var lengthOfLongestColumn = 0;
 
         nodes.forEach(function (column) {
-            lengthOfLongestColumn = Math.max(lengthOfLongestColumn, column.length);
-        });
+            lengthOfLongestColumn = Math.max(lengthOfLongestColumn, this.getLastPosition(column));
+        }.bind(this));
 
         return lengthOfLongestColumn;
     },
 
+    getLastPosition: function (column) {
+        var lastPositionInColumn = 0;
+
+        column.forEach(function (node) {
+            if (node && node.displayPosition) {
+                lastPositionInColumn = Math.max(lastPositionInColumn, node.displayPosition);
+            }
+        });
+
+        return lastPositionInColumn;
+    },
+
     addRelationshipIndicators: function (nodes) {
-        var inBetweenMode = false;
+        var inBetweenMode;
 
         nodes.forEach(function (column, columnIndex) {
 
@@ -390,7 +498,61 @@ var DependencyTree = React.createClass({
                 });
             }
         });
+    },
+
+    getNodeSnapShot: function (nodes) {
+        var snapShotChecksum = 0;
+
+        nodes.forEach(function (column) {
+            column.forEach(function (node) {
+                if (node && node.displayPosition) {
+                    snapShotChecksum += node.displayPosition;
+                }
+            });
+        });
+
+        return snapShotChecksum;
     }
 });
+
+
+function debug (nodes, msg) {
+    // todo: lots of hard coded values here that need to be dynamic
+    var cell;
+    var cells = [[], [], [], [], []];
+    var indexColumn;
+    var indexNode;
+    var longestColumn = 14;
+    var string;
+
+    console.error(msg);
+
+    for (indexColumn = 0; indexColumn < 5; indexColumn += 1) {
+
+        for (indexNode = 0; indexNode < longestColumn; indexNode += 1) {
+            cells[indexColumn][indexNode] = '          ';
+        }
+    }
+
+    for (indexColumn = 0; indexColumn < 5; indexColumn += 1) {
+
+        for (indexNode = 0; indexNode < longestColumn; indexNode += 1) {
+            cell = nodes[indexColumn][indexNode];
+
+            if (cell && cell.alternateName) {
+                cells[indexColumn][cell.displayPosition] = cell.alternateName + ' ';
+            }
+        }
+    }
+
+    for (indexNode = 0; indexNode < longestColumn; indexNode += 1) {
+        string = '';
+
+        for (indexColumn = 0; indexColumn < 5; indexColumn += 1) {
+            string += cells[indexColumn][indexNode];
+        }
+        console.error(string);
+    }
+}
 
 module.exports = DependencyTree;
