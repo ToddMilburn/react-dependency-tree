@@ -2,18 +2,62 @@
 $primary-blue: #304CB2;
 
 .dependency-node {
+    display: block;
+    height: 36px;
 
-    &--content {
+    &_tall {
+        height: 54px;
+    }
+
+    &--node {
         border-radius: 5px;
         box-shadow: inset 0 0 0 1px $primary-blue;
         display: inline-block;
         height: 36px;
         overflow: hidden;
         vertical-align: top;
-        width: 150px;
+        width: 130px;
 
         &_highlight {
             box-shadow: inset 0 0 0 2px $primary-blue;
+        }
+
+        &_tall {
+            height: 54px;
+        }
+
+        &_wide {
+            width: 210px;
+        }
+    }
+
+    &--node-padding {
+        display: inline-block;
+        margin-left: 5px;
+        overflow: hidden;
+        width: 130px;
+
+        &_wide {
+            width: 200px;
+        }
+    }
+
+    &--content {
+        box-shadow: none;
+        display: table-cell;
+        font: 13px Arial;
+        height: 36px;
+        //text-align: center;
+        //padding-left: 2px;
+        vertical-align: middle;
+        width: 125px;
+
+        &_main {
+            font-weight: bold;
+        }
+
+        &_tall {
+            height: 54px;
         }
 
         &_wide {
@@ -21,20 +65,13 @@ $primary-blue: #304CB2;
         }
     }
 
-    &--content-padding {
-        display: inline-block;
-        margin-left: 5px;
-        overflow: hidden;
-        width: 140px;
-
-        &_wide {
-            width: 190px;
-        }
-    }
-
     &--graphic {
         display: inline-block;
-        width: 40px;
+        width: 20px;
+
+        &_wide {
+            width: 40px;
+        }
     }
 
     &--graphic_front-top {
@@ -60,5 +97,17 @@ $primary-blue: #304CB2;
     &--graphic_pass-thru {
         border-left: 1px solid $primary-blue;
         vertical-align: top;
+    }
+
+    &_tall {
+        .dependency-node--graphic_front-top {
+            height: 28px;
+        }
+
+        .dependency-node--graphic_front-bottom,
+        .dependency-node--graphic_back-top,
+        .dependency-node--graphic_back-bottom {
+            height: 26px;
+        }
     }
 }
