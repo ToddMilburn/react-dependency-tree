@@ -36,7 +36,7 @@ var DependencyTree = React.createClass({
 
     render: function () {
         return (
-            <div className="dependency-tree">
+            <div className="react-dependency-tree">
                 {this.state.nodes.map(this.renderColumn)}
             </div>
         );
@@ -44,7 +44,7 @@ var DependencyTree = React.createClass({
 
     renderColumn: function (column, index) {
         return (
-            <ul className="dependency-tree--column" key={index}>
+            <ul className="react-dependency-tree--column" key={index}>
                 {column.map(this.renderDetail)}
             </ul>
         );
