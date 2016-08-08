@@ -4,9 +4,9 @@ var _ = require('lodash');
 var classNames = require('classnames');
 
 // INTERNAL LIBS
-var DependencyNode = require('./dependency-node');
+var ReactDependencyNode = require('./react-dependency-node');
 
-var DependencyTree = React.createClass({
+var ReactDependencyTree = React.createClass({
 
     propTypes: {
         items: React.PropTypes.shape({
@@ -36,7 +36,7 @@ var DependencyTree = React.createClass({
 
     render: function () {
         return (
-            <div className="dependency-tree">
+            <div className="react-dependency-tree">
                 {this.state.nodes.map(this.renderColumn)}
             </div>
         );
@@ -44,7 +44,7 @@ var DependencyTree = React.createClass({
 
     renderColumn: function (column, index) {
         return (
-            <ul className="dependency-tree--column" key={index}>
+            <ul className="react-dependency-tree--column" key={index}>
                 {column.map(this.renderDetail)}
             </ul>
         );
@@ -53,7 +53,7 @@ var DependencyTree = React.createClass({
     renderDetail: function (item, index) {
         return (
             <li key={index}>
-                <DependencyNode {...this.getNodeProps(item, index)} />
+                <ReactDependencyNode {...this.getNodeProps(item, index)} />
             </li>
         );
     },
@@ -555,4 +555,4 @@ function debug (nodes, msg) {
     }
 }
 
-module.exports = DependencyTree;
+module.exports = ReactDependencyTree;

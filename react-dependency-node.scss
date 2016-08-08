@@ -1,7 +1,7 @@
 
 $primary-blue: #304CB2;
 
-.dependency-node {
+.react-dependency-node {
     display: block;
     height: 36px;
 
@@ -100,13 +100,13 @@ $primary-blue: #304CB2;
     }
 
     &_tall {
-        .dependency-node--graphic_front-top {
+        .react-dependency-node--graphic_front-top {
             height: 28px;
         }
 
-        .dependency-node--graphic_front-bottom,
-        .dependency-node--graphic_back-top,
-        .dependency-node--graphic_back-bottom {
+        .react-dependency-node--graphic_front-bottom,
+        .react-dependency-node--graphic_back-top,
+        .react-dependency-node--graphic_back-bottom {
             height: 26px;
         }
     }

@@ -2,7 +2,7 @@
 var React = require('react');
 var classNames = require('classnames');
 
-var DependencyNode = React.createClass({
+var ReactDependencyNode = React.createClass({
 
     propTypes: {
         child: React.PropTypes.bool,
@@ -65,8 +65,8 @@ var DependencyNode = React.createClass({
 
     getClass: function () {
         var classes = {
-            'dependency-node': true,
-            'dependency-node_tall': this.props.tall
+            'react-dependency-node': true,
+            'react-dependency-node_tall': this.props.tall
         };
 
         return classNames(classes);
@@ -74,8 +74,8 @@ var DependencyNode = React.createClass({
 
     getGraphicClass: function () {
         var classes = {
-            'dependency-node--graphic': true,
-            'dependency-node--graphic_wide': this.props.wide
+            'react-dependency-node--graphic': true,
+            'react-dependency-node--graphic_wide': this.props.wide
         };
 
         return classNames(classes);
@@ -83,10 +83,10 @@ var DependencyNode = React.createClass({
 
     getFrontTopGraphicClassName: function () {
         var classes = {
-            'dependency-node--graphic_front-top': true,
-            'dependency-node--graphic_has-parent': this.props.child,
-            'dependency-node--graphic_sybling-above': this.props.syblingAbove,
-            'dependency-node--graphic_pass-thru': this.props.passThru
+            'react-dependency-node--graphic_front-top': true,
+            'react-dependency-node--graphic_has-parent': this.props.child,
+            'react-dependency-node--graphic_sybling-above': this.props.syblingAbove,
+            'react-dependency-node--graphic_pass-thru': this.props.passThru
         };
 
         return classNames(classes);
@@ -94,9 +94,9 @@ var DependencyNode = React.createClass({
 
     getFrontBottomGraphicClassName: function () {
         var classes = {
-            'dependency-node--graphic_front-bottom': true,
-            'dependency-node--graphic_sybling-below': this.props.syblingBelow,
-            'dependency-node--graphic_pass-thru': this.props.passThru
+            'react-dependency-node--graphic_front-bottom': true,
+            'react-dependency-node--graphic_sybling-below': this.props.syblingBelow,
+            'react-dependency-node--graphic_pass-thru': this.props.passThru
         };
 
         return classNames(classes);
@@ -104,8 +104,8 @@ var DependencyNode = React.createClass({
 
     getBackTopGraphicClassName: function () {
         var classes = {
-            'dependency-node--graphic_back-top': true,
-            'dependency-node--graphic_has-child': this.props.parent
+            'react-dependency-node--graphic_back-top': true,
+            'react-dependency-node--graphic_has-child': this.props.parent
         };
 
         return classNames(classes);
@@ -113,7 +113,7 @@ var DependencyNode = React.createClass({
 
     getBackBottomGraphicClassName: function () {
         var classes = {
-            'dependency-node--graphic_back-bottom': true
+            'react-dependency-node--graphic_back-bottom': true
         };
 
         return classNames(classes);
@@ -121,10 +121,10 @@ var DependencyNode = React.createClass({
 
     getNodeClassName: function () {
         var classes = {
-            'dependency-node--node': true,
-            'dependency-node--node_highlight': this.props.highlight,
-            'dependency-node--node_tall': this.props.tall,
-            'dependency-node--node_wide': this.props.wide
+            'react-dependency-node--node': true,
+            'react-dependency-node--node_highlight': this.props.highlight,
+            'react-dependency-node--node_tall': this.props.tall,
+            'react-dependency-node--node_wide': this.props.wide
         };
 
         return classNames(classes);
@@ -132,9 +132,9 @@ var DependencyNode = React.createClass({
 
     getNodePaddingClassName: function () {
         var classes = {
-            'dependency-node--node-padding': true,
-            'dependency-node--node-padding_tall': this.props.tall,
-            'dependency-node--node-padding_wide': this.props.wide
+            'react-dependency-node--node-padding': true,
+            'react-dependency-node--node-padding_tall': this.props.tall,
+            'react-dependency-node--node-padding_wide': this.props.wide
         };
 
         return classNames(classes);
@@ -142,13 +142,13 @@ var DependencyNode = React.createClass({
 
     getContentClassName: function () {
         var classes = {
-            'dependency-node--content': true,
-            'dependency-node--content_tall': this.props.tall,
-            'dependency-node--content_wide': this.props.wide
+            'react-dependency-node--content': true,
+            'react-dependency-node--content_tall': this.props.tall,
+            'react-dependency-node--content_wide': this.props.wide
         };
 
         return classNames(classes);
     }
 });
 
-module.exports = DependencyNode;
+module.exports = ReactDependencyNode;
