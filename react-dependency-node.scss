@@ -1,44 +1,44 @@
-
 $primary-blue: #304CB2;
+$secondary-light-blue: #A4BAF2;
+$primary-red: #D5152E;
+$neutral-black: #000000;
+$neutral-gray1: #F5F5F5;
 
 .react-dependency-node {
     display: block;
-    height: 36px;
+    min-height: 51px;
 
-    &_tall {
-        height: 54px;
+    &_small {
+        min-height: 36px;
+    }
+
+    &_large {
+        min-height: 80px;
     }
 
     &--node {
         border-radius: 5px;
         box-shadow: inset 0 0 0 1px $primary-blue;
         display: inline-block;
-        height: 36px;
-        overflow: hidden;
+        height: 51px;
         vertical-align: top;
-        width: 130px;
 
-        &_highlight {
-            box-shadow: inset 0 0 0 2px $primary-blue;
+        &_small {
+            height: 36px;
+            width: 90px;
         }
 
-        &_tall {
-            height: 54px;
+        &_large {
+            height: 80px;
         }
 
-        &_wide {
-            width: 210px;
+        &_bright {
+            box-shadow: inset 0 0 0 1px $primary-red;
         }
-    }
 
-    &--node-padding {
-        display: inline-block;
-        margin-left: 5px;
-        overflow: hidden;
-        width: 130px;
-
-        &_wide {
-            width: 200px;
+        &_dark {
+            background-color: $neutral-gray1;
+            box-shadow: inset 0 0 0 1px $secondary-light-blue;
         }
     }
 
@@ -46,64 +46,77 @@ $primary-blue: #304CB2;
         box-shadow: none;
         display: table-cell;
         font: 13px Arial;
-        height: 36px;
-        //text-align: center;
-        //padding-left: 2px;
         vertical-align: middle;
-        width: 125px;
+        padding-left: 2px;
+        height: 50px;
 
         &_main {
             font-weight: bold;
         }
 
-        &_tall {
-            height: 54px;
+        &_small {
+            height: 36px;
         }
 
-        &_wide {
-            width: 200px;
+        &_large {
+            height: 80px;
         }
     }
 
-    &--graphic {
+    &--connector {
         display: inline-block;
-        width: 20px;
-    }
-
-    &--graphic_front-top {
-        display: block;
-        height: 20px;
-    }
-
-    &--graphic_front-bottom,
-    &--graphic_back-top,
-    &--graphic_back-bottom {
-        display: block;
-        height: 16px;
-    }
-
-    &--graphic_has-parent,
-    &--graphic_has-child {
-        border-bottom: 1px solid $primary-blue;
         vertical-align: top;
-    }
+        width: 10px;
 
-    &--graphic_sybling-above,
-    &--graphic_sybling-below,
-    &--graphic_pass-thru {
-        border-left: 1px solid $primary-blue;
-        vertical-align: top;
-    }
-
-    &_tall {
-        .react-dependency-node--graphic_front-top {
+        &_front-top,
+        &_back-top {
+            display: block;
             height: 28px;
         }
 
-        .react-dependency-node--graphic_front-bottom,
-        .react-dependency-node--graphic_back-top,
-        .react-dependency-node--graphic_back-bottom {
-            height: 26px;
+        &_front-bottom,
+        &_back-bottom {
+            display: block;
+            height: 23px;
+        }
+
+        &_has-parent,
+        &_has-child {
+            border-bottom: 1px solid $primary-blue;
+        }
+
+        &_sybling-above,
+        &_sybling-below,
+        &_pass-thru {
+            border-left: 1px solid $primary-blue;
+        }
+
+        &_small {
+            min-height: 36px;
+
+            .react-dependency-node--connector_front-top,
+            .react-dependency-node--connector_back-top {
+                height: 20px;
+            }
+
+            .react-dependency-node--connector_front-bottom,
+            .react-dependency-node--connector_back-bottom {
+                height: 16px;
+            }
+        }
+
+        &_large {
+            min-height: 80px;
+
+            .react-dependency-node--connector_front-top,
+            .react-dependency-node--connector_back-top {
+                height: 42px;
+            }
+
+            .react-dependency-node--connector_front-bottom,
+            .react-dependency-node--connector_back-bottom {
+                height: 38px;
+            }
         }
     }
 }

@@ -1,28 +1,31 @@
-// EXTERNAL VENDOR LIBS
-var React = require('react');
 var _ = require('lodash');
 var classNames = require('classnames');
-
-// INTERNAL LIBS
+var React = require('react');
 var ReactDependencyNode = require('./react-dependency-node');
+
 
 var ReactDependencyTree = React.createClass({
 
     propTypes: {
-        items: React.PropTypes.shape({
-            alternateName: React.PropTypes.node,
-            items: React.PropTypes.array.isRequired,
-            nodeName: React.PropTypes.node.isRequired
-        }).isRequired,
-        renderNodeCallback: React.PropTypes.func.isRequired,
-        tall: React.PropTypes.bool,
-        wide: React.PropTypes.bool
+        items: React.PropTypes.arrayOf(
+            React.PropTypes.shape({
+                applicable: React.PropTypes.bool,
+                dark: React.PropTypes.bool,
+                data: React.PropTypes.object,
+                displayableChildren: React.PropTypes.bool,
+                items: React.PropTypes.array.isRequired,
+                bright: React.PropTypes.bool,
+                name: React.PropTypes.string.isRequired,
+                nodeType: React.PropTypes.string
+            })
+        ).isRequired,
+        filterDuplicates: React.PropTypes.bool,
+        renderNodeCallback: React.PropTypes.func.isRequired
     },
 
     getDefaultProps: function () {
         return {
-            tall: false,
-            wide: false
+            filterDuplicates: false
         };
     },
 
@@ -61,10 +64,10 @@ var ReactDependencyTree = React.createClass({
     getNodeProps: function (item, index) {
         var connectionProps = this.getConnections(item, index);
         var props = {
-            highlight: (this.state.mainNodeName === item.nodeName),
-            renderNodeCallback: this.props.renderNodeCallback.bind(null, item),
-            tall: this.props.tall,
-            wide: this.props.wide
+            dark: item.dark,
+            item: item,
+            bright: item.bright,
+            renderNodeCallback: this.props.renderNodeCallback
         };
 
         return _.extend(props, connectionProps);
@@ -72,11 +75,11 @@ var ReactDependencyTree = React.createClass({
 
     getConnections: function (item, index) {
         var parent = item.parent;
-        var syblingAbove = (parent && parent.firstChild !== parent.lastChild && parent.firstChild !== index);
-        var syblingBelow = (parent && parent.firstChild !== parent.lastChild && parent.lastChild !== index);
+        var syblingAbove = (parent !== undefined && parent.firstChild !== parent.lastChild && parent.firstChild !== index);
+        var syblingBelow = (parent !== undefined && parent.firstChild !== parent.lastChild && parent.lastChild !== index);
 
         return {
-            child: (parent !== undefined),
+            child: (parent !== 0 && parent !== undefined),
             parent: (item.firstChild !== undefined),
             passThru: item.inBetween,
             syblingAbove: syblingAbove,
@@ -86,55 +89,119 @@ var ReactDependencyTree = React.createClass({
 
     initializeState: function (props) {
         return {
-            mainNodeName: props.items.nodeName.toUpperCase(),
             nodes: this.prepareAllData(props.items)
         };
     },
 
     prepareAllData: function (allNodes) {
-        var nodes = this.getNodeColumns(allNodes);
-        var lastSnapShotChecksum = this.getNodeSnapShot(nodes);
+        var nodes = allNodes;
+        var lastSnapShotChecksum;
         var refining = 1;
         var snapShotChecksum;
 
+        if (this.props.filterDuplicates) {
+            nodes = this.filterAllDuplicates(nodes);
+        }
+
+        nodes = this.getNodeColumns(nodes);
         this.getParents(nodes);
-        this.addDefaultPositions(nodes);
         this.addChildPositions(nodes);
 
-        while (refining && refining < 10) {
-            this.positionParentInCenterOfChildren(nodes);
-            this.moveChildrenDown(nodes);
-            this.ensureAllChildrenAreContiguous(nodes);
-            this.moveChildrenUp(nodes);
-            this.positionParentInCenterOfChildren(nodes);
-            this.updateChildIndexFromChildDisplayPositions(nodes);
-            this.fillInBlankCells(nodes);
-            this.addRelationshipIndicators(nodes);
+        lastSnapShotChecksum = this.getNodeSnapShot(nodes);
+
+        while (refining && refining < 20) {
+            this.RepositionNodesForBestPlacement(nodes);
 
             snapShotChecksum = this.getNodeSnapShot(nodes);
 
             if (lastSnapShotChecksum !== snapShotChecksum) {
                 lastSnapShotChecksum = snapShotChecksum;
-            } else {
                 refining += 1;
+            } else {
+                refining = 0; // no changes made, so we're done
             }
         }
+
+        this.updateChildIndexFromChildDisplayPositions(nodes);
+        this.fillInBlankCells(nodes);
+        this.addRelationshipIndicators(nodes);
 
         return nodes;
     },
 
-    getNodeColumns: function (node) {
-        var nodes = [];
-        var grandfatherNode = [{
-            alternateName: (node.alternateName) ? node.alternateName.toUpperCase() : '',
-            displayPosition: 0,
-            nodeName: node.nodeName.toUpperCase()
-        }];
+    filterAllDuplicates: function (allNodes) {
+        var filteredNodes = [];
 
-        nodes = this.buildNodeColumns(node, 0, 0, nodes);
+        allNodes.forEach(function (node) {
+            filteredNodes.push(this.filterDuplicates(node, {}));
+        }.bind(this));
 
-        // add in first column for the 'main' node'
-        nodes.unshift(grandfatherNode);
+        return filteredNodes;
+    },
+
+    filterDuplicates: function (originalNode, filteredNode, nodesProcessed) {
+        if (nodesProcessed === undefined) {
+            nodesProcessed = [];
+
+            filteredNode.applicable = originalNode.applicable;
+            filteredNode.dark = originalNode.dark;
+            filteredNode.data = _.cloneDeep(originalNode.data);
+            filteredNode.displayableChildren = originalNode.displayableChildren;
+            filteredNode.items = [];
+            filteredNode.bright = originalNode.bright;
+            filteredNode.name = originalNode.name;
+            filteredNode.nodeType = originalNode.nodeType;
+        }
+        nodesProcessed.push(filteredNode.name);
+
+        // TODO this isn't foolproof - two identical names are possible
+        originalNode.items.forEach(function (childNode) {
+            var node = {
+                applicable: childNode.applicable,
+                dark: childNode.dark,
+                data: _.cloneDeep(childNode.data),
+                displayableChildren: childNode.displayableChildren,
+                items: [],
+                bright: childNode.bright,
+                name: childNode.name,
+                nodeType: childNode.nodeType,
+            };
+
+            filteredNode.items.push(node);
+
+            if (_.indexOf(nodesProcessed, childNode.name) === -1) {
+                if (childNode.items.length) {
+                    this.filterDuplicates(childNode, node, nodesProcessed);
+                } else {
+                    nodesProcessed.push(node.name);
+                }
+            } else {
+                node.dark = true;
+            }
+        }, this);
+
+
+        return filteredNode;
+    },
+
+    getNodeColumns: function (rawNodes) {
+        var nodes = [[]];
+
+        rawNodes.forEach(function (node) {
+            nodes[0].push({
+                applicable: node.applicable,
+                dark: node.dark,
+                data: _.cloneDeep(node.data),
+                displayableChildren: node.displayableChildren,
+                displayPosition: nodes[0].length,
+                bright: node.bright,
+                name: node.name,
+                nodeType: node.nodeType,
+                parent: 0
+            });
+
+            nodes = this.buildNodeColumns(node, 1, nodes[0].length - 1, nodes);
+        }.bind(this));
 
         return nodes;
     },
@@ -147,9 +214,14 @@ var ReactDependencyTree = React.createClass({
             }
 
             nodes[level].push({
-                alternateName: childNode.alternateName,
+                applicable: childNode.applicable,
+                dark: childNode.dark,
+                data: _.cloneDeep(childNode.data),
+                displayableChildren: childNode.displayableChildren,
                 displayPosition: nodes[level].length,
-                nodeName: childNode.nodeName,
+                bright: childNode.bright,
+                name: childNode.name,
+                nodeType: childNode.nodeType,
                 parent: parentIndex
             });
 
@@ -173,17 +245,6 @@ var ReactDependencyTree = React.createClass({
         });
     },
 
-    addDefaultPositions: function (nodes) {
-        nodes.forEach(function (column, index) {
-
-            if (index > 0) {
-                column.forEach(function (node, nodeIndex) {
-                    node.displayPosition = nodeIndex;
-                });
-            }
-        });
-    },
-
     // initialize for each parent an element for firstChild and lastChild
     addChildPositions: function (nodes) {
         var parentName;
@@ -195,212 +256,78 @@ var ReactDependencyTree = React.createClass({
                 parentName = '';
                 column.forEach(function (childNode, index) {
 
-                    if (childNode.nodeName) {
+                    if (parentName.length === 0) {
+                        parentName = childNode.parent.name;
+                        childNode.parent.firstChild = index;
+                    }
 
-                        if (parentName.length === 0) {
-                            parentName = childNode.parent.nodeName;
+                    if (childNode.parent.name !== parentName) {
+                        childNode.parent.firstChild = index;
+                        childNode.parent.lastChild = index;
+                        parentName = childNode.parent.name;
+                    } else {
+                        if (childNode.parent.firstChild === undefined) {
                             childNode.parent.firstChild = index;
                         }
-
-                        if (childNode.parent.nodeName !== parentName) {
-                            childNode.parent.firstChild = index;
-                            childNode.parent.lastChild = index;
-                            parentName = childNode.parent.nodeName;
-                        } else {
-                            if (childNode.parent.firstChild === undefined) {
-                                childNode.parent.firstChild = index;
-                            }
-                            childNode.parent.lastChild = index;
-                        }
+                        childNode.parent.lastChild = index;
                     }
                 }, this);
             }
         });
     },
 
-    positionParentInCenterOfChildren: function (nodes) {
-        var column;
-        var displayPosition;
-        var index;
-        var middle;
-        var nextColumn;
-        var firstChild;
-        var lastChild;
-
-        function positionParent (parent, parentIndex) {
-            if (parent.firstChild !== undefined) {
-                firstChild = nextColumn[parent.firstChild];
-                lastChild = nextColumn[parent.lastChild];
-
-                middle = (lastChild.displayPosition - firstChild.displayPosition) / 2;
-                displayPosition = firstChild.displayPosition + Math.floor(middle);
-            } else {
-                displayPosition = parent.displayPosition;
-            }
-
-            // don't position this node before previous sibling
-            if (parentIndex && column[parentIndex - 1] && displayPosition <= column[parentIndex - 1].displayPosition) {
-                displayPosition = column[parentIndex - 1].displayPosition + 1;
-            }
-
-            parent.displayPosition = displayPosition;
-        }
-
-        for (index = nodes.length - 2; index >= 0; index -= 1) {
-
-            column = nodes[index];
-            nextColumn = nodes[index + 1];
-
-            column.forEach(
-                positionParent
-            );
-        }
-    },
-
-    removeGapsInChildren: function (nodes) {
-        var childIndex;
-        var column;
-        var displayPosition;
+    RepositionNodesForBestPlacement: function (nodes) {
+        var currentColumn;
+        var delta;
         var index;
         var nextColumn;
 
-        for (index = 1; index < nodes.length - 1; index += 1) {
+        function getDesiredDisplayPosition (node, nextColumn) {
+            var displayPosition;
+            var firstChildNode = nextColumn[node.firstChild];
+            var lastChildNode = nextColumn[node.lastChild];
+            var middle = (lastChildNode.displayPosition - firstChildNode.displayPosition) / 2;
 
-            column = nodes[index];
+            displayPosition = firstChildNode.displayPosition + Math.floor(middle);
+
+            return displayPosition;
+        }
+
+        function moveParentAndLowerSyblingsDown (column, startingIndex, delta) {
+            moveDisplayPositionsDown(column, startingIndex, delta);
+        }
+
+        function moveChildrenAndLowerSyblingsDown (column, startingIndex, delta) {
+            moveDisplayPositionsDown(column, startingIndex, delta);
+        }
+
+        function moveDisplayPositionsDown (column, startingIndex, delta) {
+            var index;
+
+            for (index = startingIndex; index < column.length; index = index + 1) {
+                column[index].displayPosition = column[index].displayPosition + delta;
+            }
+        }
+
+        for (index = 0; index < nodes.length - 1; index = index + 1) {
+
+            currentColumn = nodes[index];
             nextColumn = nodes[index + 1];
 
-            column.forEach(function (node) {
+            currentColumn.forEach(function (node, nodeIndex) {
 
                 if (node.firstChild !== undefined) {
+                    displayPosition = getDesiredDisplayPosition(node, nextColumn);
 
-                    displayPosition = nextColumn[node.firstChild].displayPosition;
-
-                    for (childIndex = node.firstChild + 1; childIndex <= node.lastChild; childIndex += 1) {
-                        displayPosition += 1;
-
-                        if (nextColumn[childIndex].displayPosition !== displayPosition) {
-                            nextColumn[childIndex].displayPosition = displayPosition;
-                        }
+                    if (displayPosition > node.displayPosition) {
+                        delta = displayPosition - node.displayPosition;
+                        moveParentAndLowerSyblingsDown(currentColumn, nodeIndex, delta);
+                    } else if (displayPosition < node.displayPosition) {
+                        delta = node.displayPosition - displayPosition;
+                        moveChildrenAndLowerSyblingsDown(nextColumn, node.firstChild, delta);
                     }
                 }
             });
-        }
-    },
-
-    removeOverlaps: function (nodes) {
-        var lastDisplayPosition;
-
-        function moveChildren (node) {
-            if (lastDisplayPosition >= node.displayPosition) {
-                node.displayPosition = lastDisplayPosition + 1;
-            }
-            lastDisplayPosition = node.displayPosition;
-        }
-
-        for (index = 1; index < nodes.length - 1; index += 1) {
-
-            column = nodes[index];
-            lastDisplayPosition = -1;
-
-            column.forEach(moveChildren.bind(this));
-        }
-    },
-
-    // never allow lastChild of a parent to be above the parent
-    moveChildrenDown: function (nodes) {
-        var column;
-        var delta;
-        var nextColumn;
-
-        function moveChildren (node) {
-            if (node.lastChild !== undefined) {
-                delta = node.displayPosition - nextColumn[node.lastChild].displayPosition;
-
-                if (delta > 0) {
-                    // move down all children in column starting from node.firstChild
-                    this.moveDisplayPositionsDown(nextColumn, node.firstChild, delta);
-                }
-            }
-        }
-
-        for (index = 1; index < nodes.length - 1; index += 1) {
-
-            column = nodes[index];
-            nextColumn = nodes[index + 1];
-
-            column.forEach(moveChildren.bind(this));
-        }
-    },
-
-    moveDisplayPositionsDown: function (column, startingIndex, delta) {
-        var index;
-
-        for (index = startingIndex; index < column.length; index += 1) {
-            column[index].displayPosition += delta;
-        }
-    },
-
-    // never allow firstChild of a parent to be below the parent
-    moveChildrenUp: function (nodes) {
-        var column;
-        var delta;
-        var nextColumn;
-
-        function moveChildren (node) {
-            if (node.firstChild !== undefined) {
-                delta = node.displayPosition - nextColumn[node.firstChild].displayPosition;
-
-                if (delta < 0) {
-                    // move up all children in column starting from node.firstChild
-                    this.moveDisplayPositionsUp(nextColumn, node.firstChild, delta);
-                }
-            }
-        }
-
-        for (index = 1; index < nodes.length - 1; index += 1) {
-
-            column = nodes[index];
-            nextColumn = nodes[index + 1];
-
-            column.forEach(moveChildren.bind(this));
-        }
-    },
-
-    moveDisplayPositionsUp: function (column, startingIndex, delta) {
-        var index;
-
-        for (index = startingIndex; index < column.length; index += 1) {
-            column[index].displayPosition += delta;
-        }
-    },
-
-    ensureAllChildrenAreContiguous: function (nodes) {
-        var column;
-        var delta;
-        var nextColumn;
-
-        function moveChildren (node) {
-            var displayPosition;
-            var indexChildren;
-
-            if (node.firstChild !== undefined) {
-                displayPosition = nextColumn[node.firstChild].displayPosition + 1;
-
-                for (indexChildren = node.firstChild + 1; indexChildren <= node.lastChild; indexChildren += 1) {
-
-                    if (nextColumn[indexChildren]) {
-                        nextColumn[indexChildren].displayPosition = displayPosition;
-                        displayPosition += 1;
-                    }
-                }
-            }
-        }
-
-        for (index = 1; index < nodes.length - 1; index += 1) {
-            column = nodes[index];
-            nextColumn = nodes[index + 1];
-
-            column.forEach(moveChildren.bind(this));
         }
     },
 
@@ -431,7 +358,9 @@ var ReactDependencyTree = React.createClass({
             columnData = this.createArrayOfEmptyObjects(lengthOfLongestColumn);
 
             column.forEach(function (node) {
-                columnData[node.displayPosition] = node;
+                if (node.displayPosition !== undefined) {
+                    columnData[node.displayPosition] = node;
+                }
             });
 
             nodes[columnIndex] = columnData;
@@ -442,7 +371,7 @@ var ReactDependencyTree = React.createClass({
         var arrayOfEmptyObjects = [];
         var loopIndex;
 
-        for (loopIndex = numberOfArrayItemsToCreate; loopIndex > 0; loopIndex -= 1) {
+        for (loopIndex = numberOfArrayItemsToCreate; loopIndex > 0; loopIndex = loopIndex - 1) {
             arrayOfEmptyObjects.push({});
         }
 
@@ -476,7 +405,7 @@ var ReactDependencyTree = React.createClass({
 
         nodes.forEach(function (column, columnIndex) {
 
-            if (columnIndex > 0 && columnIndex < nodes.length - 1) {
+            if (columnIndex > 0 && columnIndex < nodes.length) {
 
                 inBetweenMode = false;
                 column.forEach(function (childNode, index) {
@@ -487,7 +416,7 @@ var ReactDependencyTree = React.createClass({
 
                     if (inBetweenMode) {
 
-                        if (!childNode.nodeName) {
+                        if (!childNode.name) {
                             childNode.inBetween = true;
                         }
                     }
@@ -515,44 +444,5 @@ var ReactDependencyTree = React.createClass({
     }
 });
 
-
-function debug (nodes, msg) {
-    // todo: lots of hard coded values here that need to be dynamic
-    var cell;
-    var cells = [[], [], [], [], []];
-    var indexColumn;
-    var indexNode;
-    var longestColumn = 14;
-    var string;
-
-    console.error(msg);
-
-    for (indexColumn = 0; indexColumn < 5; indexColumn += 1) {
-
-        for (indexNode = 0; indexNode < longestColumn; indexNode += 1) {
-            cells[indexColumn][indexNode] = '          ';
-        }
-    }
-
-    for (indexColumn = 0; indexColumn < 5; indexColumn += 1) {
-
-        for (indexNode = 0; indexNode < longestColumn; indexNode += 1) {
-            cell = nodes[indexColumn][indexNode];
-
-            if (cell && cell.alternateName) {
-                cells[indexColumn][cell.displayPosition] = cell.alternateName + ' ';
-            }
-        }
-    }
-
-    for (indexNode = 0; indexNode < longestColumn; indexNode += 1) {
-        string = '';
-
-        for (indexColumn = 0; indexColumn < 5; indexColumn += 1) {
-            string += cells[indexColumn][indexNode];
-        }
-        console.error(string);
-    }
-}
 
 module.exports = ReactDependencyTree;
